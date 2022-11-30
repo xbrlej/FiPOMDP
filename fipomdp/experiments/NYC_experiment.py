@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 import logging
+import syspath
+syspath.init()
 import platform
 import time
-from functools import partial
 from statistics import stdev
-from typing import List, Tuple, Dict, Union, Any
+from typing import List, Tuple
 
 import psutil
 from joblib import Parallel, delayed
@@ -14,9 +15,10 @@ from fipomdp import ConsPOMDP
 from fipomdp.energy_solvers import ConsPOMDPBasicES
 from fipomdp.experiments.NYC_environment import NYCPOMDPEnvironment
 from fipomdp.experiments.UUV_experiment import simulate_observation
-from fipomdp.pomcp import OnlineStrategy
+from fipomdp.experimental.pomcp_NYC import OnlineStrategy
 
-from fipomdp.rollout_functions import basic, grid_manhattan_distance, product, consumption_based
+from fipomdp.rollout_functions import consumption_based
+from threads_macro import THREADS
 
 
 def nyc_experiment(computed_cpomdp: ConsPOMDP, computed_solver: ConsPOMDPBasicES, capacity: int, targets: List[int], random_seed: int, logger) -> \
@@ -104,7 +106,7 @@ def nyc_experiment(computed_cpomdp: ConsPOMDP, computed_solver: ConsPOMDPBasicES
 
 
 def log_experiment_with_seed(cpomdp, env, i, log_file_name, solver, targets):
-    handler = logging.FileHandler(f"./logs/{log_file_name}{i}.log", 'w')
+    handler = logging.FileHandler(f"./logs_NYC/{log_file_name}{i}.log", 'w')
     formatter = logging.Formatter("%(asctime)s %(levelname)-8s %(message)s")
     handler.setFormatter(formatter)
     logger = logging.getLogger(f"{i}")
@@ -150,8 +152,8 @@ def main():
 
     preprocessing_time = round(time.time() - preprocessing_start)
 
-    results = Parallel(n_jobs=10)(
-        delayed(log_experiment_with_seed)(cpomdp, env, i, log_file_name, solver, targets) for i in range(10))
+    results = Parallel(n_jobs=THREADS)(
+        delayed(log_experiment_with_seed)(cpomdp, env, i, log_file_name, solver, targets) for i in range(100))
 
     logging.info(f"RESULTS (): {results}")
     print(preprocessing_time)
