@@ -1,4 +1,6 @@
 import logging
+import syspath
+syspath.init()
 import time
 import platform
 from statistics import stdev
@@ -13,8 +15,10 @@ from fipomdp import ConsPOMDP
 from fipomdp.energy_solvers import ConsPOMDPBasicES
 from fipomdp.experiments.UUV_experiment import simulate_observation
 from fipomdp.experiments.tiger_environent import TigerEnvironment
-from fipomdp.pomcp import OnlineStrategy
-from fipomdp.rollout_functions import consumption_based, tiger_step_based
+from fipomdp.experimental.pomcp_tiger import OnlineStrategy
+from fipomdp.rollout_functions import tiger_step_based
+from threads_macro import THREADS
+
 
 
 def tiger_experiment(computed_cpomdp: ConsPOMDP, computed_solver: ConsPOMDPBasicES, capacity: int, targets: List[int],
@@ -109,7 +113,7 @@ def tiger_experiment(computed_cpomdp: ConsPOMDP, computed_solver: ConsPOMDPBasic
     return max_iterations, target_hit, path, decision_times, target_hit, reward
 
 def log_experiment_with_seed(cpomdp, env, i, log_file_name, solver, targets):
-    handler = logging.FileHandler(f"./logs/{log_file_name}{i}.log", 'w')
+    handler = logging.FileHandler(f"./logs_tiger/{log_file_name}{i}.log", 'w')
     formatter = logging.Formatter("%(asctime)s %(levelname)-8s %(message)s")
     handler.setFormatter(formatter)
     logger = logging.getLogger(f"{i}")
@@ -144,7 +148,7 @@ def main():
 
     # global environment hyper parameters
 
-    listen_uncertainty = 0.4
+    listen_uncertainty = 0.15
     swap_probability = 0.2
     cap = 10
 
@@ -160,7 +164,7 @@ def main():
 
     preprocessing_time = round(time.time() - preprocessing_start)
 
-    results = Parallel(n_jobs=-1)(
+    results = Parallel(n_jobs=THREADS)(
         delayed(log_experiment_with_seed)(cpomdp, env, i, log_file_name, solver, targets) for i in range(1000))
 
     logging.info(f"RESULTS (): {results}")

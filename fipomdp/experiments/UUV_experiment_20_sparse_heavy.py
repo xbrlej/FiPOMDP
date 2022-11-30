@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-
+import syspath
+syspath.init()
 import logging
 import multiprocessing
 import platform, psutil
@@ -11,7 +12,6 @@ from typing import List, Tuple, Dict
 from joblib import Parallel, delayed
 import pickle
 
-sys.path.append('/home/xnovot18/FiPOMDP')
 
 from fimdp.core import ActionData
 from fimdp.objectives import BUCHI
@@ -21,6 +21,7 @@ from fipomdp.energy_solvers import ConsPOMDPBasicES
 from fipomdp.pomcp_20_sparse import OnlineStrategy
 from fipomdp.environment_utils import set_cross_observations_to_UUV_grid
 from fipomdp.pomcp_utils import matching_state_action, sample_from_distr
+from threads_macro import THREADS
 
 from fipomdp.rollout_functions import basic, grid_manhattan_distance, step_based
 
@@ -163,7 +164,7 @@ def main():
     cpomdp = mdp
     cpomdp.compute_guessing_cmdp_initial_state([399])
 
-    with open("cpomdp_sparse", "wb") as cpomdp_file:
+    with open("cpomdp_20", "wb") as cpomdp_file:
         pickle.dump(cpomdp, cpomdp_file)
 
     # with open("cpomdp_sparse", 'rb') as pickle_file:
@@ -175,7 +176,7 @@ def main():
     # with open("solver", "wb") as solver_file:
     #     pickle.dump(solver, solver_file)
 
-    results = Parallel(n_jobs=23)(delayed(log_experiment_with_seed)(cpomdp, env, i, log_file_name, solver, targets) for i in range(100))
+    results = Parallel(n_jobs=THREADS)(delayed(log_experiment_with_seed)(cpomdp, env, i, log_file_name, solver, targets) for i in range(100))
 
     logging.info(f"RESULTS (): {results}")
 

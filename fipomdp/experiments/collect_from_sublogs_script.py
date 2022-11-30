@@ -19,8 +19,10 @@ def main(argv):   # argv are [directory with logs, default value when died]
         with open(os.path.join(argv[0], filename), "r") as f:
             text = f.read()
             lines = text.split("IN")[-9:]
-            died = "terminating." in lines[0].split("FO     ")[1]
-            target_hits.append("True" in lines[4])
+            died = ("energy: -" in text) or ("energy: 0" in text)
+            # died = True
+            if not died:
+                target_hits.append("True" in lines[4])
             rewards.append(int(argv[1]) if died else int(lines[8].split(" ")[-1].strip()))
             # path = ast.literal_eval(lines[5].split(": ")[1].strip())
             all_dec_times.extend(ast.literal_eval(lines[6].split(": ")[1].split("\n")[0].strip()))
@@ -41,10 +43,13 @@ def main(argv):   # argv are [directory with logs, default value when died]
     stats.append(f"Average reward: {sum(rewards) / len(rewards)}")
     stats.append(f"Reward standard deviation: {stdev(rewards)}")
 
+    filename = str(argv[0]).replace("/", "")
+    print(filename)
+
     for stat in stats:
         print(stat)
 
-    stat_file = open(f"{argv[0]}_SUBLOGS_STATS.txt", 'w')
+    stat_file = open(f"{filename}_SUBLOGS_STATS.txt", 'w')
     stat_file.write('\n'.join(stats) + '\n')
 
     stat_file.close()

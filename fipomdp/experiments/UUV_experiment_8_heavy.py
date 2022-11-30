@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-
+import syspath
+syspath.init()
 import logging
 import multiprocessing
 import platform, psutil
@@ -11,8 +12,6 @@ from typing import List, Tuple, Dict
 from joblib import Parallel, delayed
 import pickle
 
-sys.path.append('/home/xnovot18/FiPOMDP')
-
 from fimdp.core import ActionData
 from fimdp.objectives import BUCHI
 from fimdpenv.UUVEnv import SingleAgentEnv
@@ -21,6 +20,8 @@ from fipomdp.energy_solvers import ConsPOMDPBasicES
 from fipomdp.pomcp_8_sparse import OnlineStrategy
 from fipomdp.environment_utils import set_cross_observations_to_UUV_grid
 from fipomdp.pomcp_utils import matching_state_action, sample_from_distr
+from threads_macro import THREADS
+
 
 from fipomdp.rollout_functions import basic, grid_manhattan_distance, step_based
 
@@ -134,7 +135,7 @@ def log_experiment_with_seed(cpomdp, env, i, log_file_name, solver, targets):
 
 
 def main():
-    log_file_name = "UUVExperimentsFromPythonFile_12_heavy"  # Change for your needs
+    log_file_name = "UUVExperimentsFromPythonFile_8_heavy"  # Change for your needs
     logging_level = logging.INFO
     # set to INFO (20) for logging to be active, set to DEBUG (10) for details,
     # set to 5 for extreme debug
@@ -172,7 +173,7 @@ def main():
     solver = ConsPOMDPBasicES(cpomdp, [63], env.capacities[0], targets)
     solver.compute_buchi()
 
-    results = Parallel(n_jobs=23)(delayed(log_experiment_with_seed)(cpomdp, env, i, log_file_name, solver, targets) for i in range(100))
+    results = Parallel(n_jobs=THREADS)(delayed(log_experiment_with_seed)(cpomdp, env, i, log_file_name, solver, targets) for i in range(100))
 
     logging.info(f"RESULTS (): {results}")
 
