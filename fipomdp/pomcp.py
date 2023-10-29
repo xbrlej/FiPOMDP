@@ -18,14 +18,18 @@ Classes used for Strategy:
 
 from __future__ import annotations
 
+import os
+
 import math
 import random
+import pickle
 from copy import copy
 from typing import List, Tuple, Dict, Optional, Callable
 
 from fimdp.core import ActionData
 from fimdp.distribution import uniform
 from fipomdp import ConsPOMDP, log_utils
+from fipomdp.config.config_utils import ConfigUtils
 from fipomdp.energy_solvers import ConsPOMDPBasicES
 
 import logging
@@ -66,6 +70,7 @@ class POMCPTree:
         rollout_function: Callable[[int, int, int, int, int, bool], float],
         rollout_horizon: int = 100,
         root_belief: Optional[Dict[int, float]] = None,
+        sparse: bool = False,
         logger=None,
         softmax_on: bool = False
     ):
@@ -94,6 +99,7 @@ class POMCPTree:
         self.exploration = exploration
         self.rollout_horizon = rollout_horizon
         self.rollout_function = rollout_function
+        self.sparse = sparse
 
         if root_belief is None:
             root_belief = {
@@ -174,6 +180,9 @@ class POMCPTree:
             Given belief particles.
         """
         history = history_node.history
+
+        #TODO what does this mean?
+        result = result - len(belief_particles)
 
         if len(history) != len(belief_particles):
             raise AttributeError(
@@ -351,11 +360,20 @@ class POMCPTree:
 
         consumed_energy = 0
         reload_count = 0
+        last_action = None
 
         for i in range(horizon):
             if len(safe_actions) == 0:
                 return 1000 * horizon * (-1)
-            bs_action = random.sample(safe_actions, 1)[0]
+            if self.sparse and last_action is not None:
+                if random.random() <= 0.5*(0.99**i) and last_action in safe_actions:
+                    bs_action = last_action
+                else:
+                    bs_action = random.sample(safe_actions, 1)[0]
+            else:
+                bs_action = random.sample(safe_actions, 1)[0]
+            last_action = bs_action
+
             state_action = matching_state_action(self.cpomdp, bs_action, sampled_state)
             energy -= state_action.cons
             consumed_energy += state_action.cons
@@ -742,7 +760,7 @@ class POMCPHistoryNode(POMCPNode):
         uct_values = self.calculate_uct()
 
         if len(uct_values) == 0:
-            print(f"Sampled: {sampled_state}")
+            self.logger.debug(f"Incorrectly Sampled: {sampled_state}")
 
         self.logger.debug(f"BEST UCT: {max(uct_values)}, ALL UCT: {uct_values}")
 
@@ -813,6 +831,7 @@ class OnlineStrategy:
 
     def __init__(
         self,
+        config_section: str,
         cpomdp: ConsPOMDP,
         capacity: int,
         init_energy: int,
@@ -840,7 +859,15 @@ class OnlineStrategy:
         else:
             self.solver = solver
 
-        action_shield = self.solver.get_buchi_safe_actions_bscmdp()
+        pickled_action_shield_file_path = ConfigUtils().get_config_property(config_section)["pickled_action_shield_file"]
+        path = os.path.join("pickled", pickled_action_shield_file_path)
+        if os.path.exists(path):
+            with open(path, "rb") as asfile:
+                action_shield = pickle.load(asfile)
+        else:
+            action_shield = self.solver.get_buchi_safe_actions_bscmdp()
+            with open(path, "wb") as asfile:
+                pickle.dump(action_shield, asfile)
 
         self.action_picked = False
 
@@ -856,6 +883,7 @@ class OnlineStrategy:
             random_seed,
             rollout_function,
             rollout_horizon,
+            sparse=False,
             logger=logger,
             softmax_on=softmax_on
         )

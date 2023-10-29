@@ -18,7 +18,7 @@ from fimdp.objectives import BUCHI
 from fimdpenv.UUVEnv import SingleAgentEnv
 from fipomdp import ConsPOMDP, log_utils
 from fipomdp.energy_solvers import ConsPOMDPBasicES
-from fipomdp.pomcp_20_sparse import OnlineStrategy
+from fipomdp.pomcp import OnlineStrategy
 from fipomdp.environment_utils import set_cross_observations_to_UUV_grid
 from fipomdp.pomcp_utils import matching_state_action, sample_from_distr
 
@@ -52,10 +52,12 @@ def uuv_experiment(computed_cpomdp: ConsPOMDP, computed_solver: ConsPOMDPBasicES
     max_iterations = 200
     actual_horizon = 100
     softmax_on = False
+    config_section = "HYPERPARAMETERS_UUV20"
 
 # -----
 
     strategy = OnlineStrategy(
+        config_section,
         computed_cpomdp,
         capacity,
         init_energy,
@@ -113,7 +115,7 @@ def simulate_observation(cpomdp: ConsPOMDP, bs_action: ActionData, src_state: in
 
 
 def log_experiment_with_seed(cpomdp, env, i, log_file_name, solver, targets):
-    handler = logging.FileHandler(f"./logs_20_sparse/{log_file_name}{i}.log", 'w')
+    handler = logging.FileHandler(f"./logs/logs_20_sparse/{log_file_name}{i}.log", 'w')
     formatter = logging.Formatter("%(asctime)s %(levelname)-8s %(message)s")
     handler.setFormatter(formatter)
     logger = logging.getLogger(f"{i}")
@@ -140,7 +142,7 @@ def main():
     # set to 5 for extreme debug
 
     logging.basicConfig(
-        filename=f"{log_file_name}.log",
+        filename=f"logs/{log_file_name}.log",
         filemode="w",  # Erase previous log
         format="%(asctime)s %(levelname)-8s %(message)s",
         level=logging_level,
@@ -163,7 +165,7 @@ def main():
     cpomdp = mdp
     cpomdp.compute_guessing_cmdp_initial_state([399])
 
-    with open("cpomdp_sparse", "wb") as cpomdp_file:
+    with open("pickled/cpomdp_sparse", "wb") as cpomdp_file:
         pickle.dump(cpomdp, cpomdp_file)
 
     # with open("cpomdp_sparse", 'rb') as pickle_file:

@@ -1,5 +1,6 @@
 import logging
-import syspath
+from fipomdp.experiments.utils import syspath
+
 syspath.init()
 import time
 import platform
@@ -8,17 +9,16 @@ from typing import List, Tuple
 
 import psutil
 from joblib import Parallel, delayed
-from mypy.plugins.default import partial
+from functools import partial
 
 from fimdp.objectives import BUCHI
 from fipomdp import ConsPOMDP
 from fipomdp.energy_solvers import ConsPOMDPBasicES
-from fipomdp.experiments.UUV_experiment import simulate_observation
-from fipomdp.experiments.tiger_environent import TigerEnvironment
-from fipomdp.experimental.pomcp_tiger import OnlineStrategy
+from fipomdp.experiments.utils.observation_util import simulate_observation
+from fipomdp.environments.tiger_environent import TigerEnvironment
+from fipomdp.pomcp import OnlineStrategy
 from fipomdp.rollout_functions import tiger_step_based
-from threads_macro import THREADS
-
+from fipomdp.experiments.utils.threads_macro import THREADS
 
 
 def tiger_experiment(computed_cpomdp: ConsPOMDP, computed_solver: ConsPOMDPBasicES, capacity: int, targets: List[int],
@@ -53,10 +53,12 @@ def tiger_experiment(computed_cpomdp: ConsPOMDP, computed_solver: ConsPOMDPBasic
     max_iterations = 100
     actual_horizon = 500  # number of action to take
     softmax_on = False
+    config_section = "HYPERPARAMETERS_TIGER"
 
     # -----
 
     strategy = OnlineStrategy(
+        config_section,
         computed_cpomdp,
         capacity,
         init_energy,
@@ -94,7 +96,7 @@ def tiger_experiment(computed_cpomdp: ConsPOMDP, computed_solver: ConsPOMDPBasic
                 reward -= actual_horizon * tiger_bite_weight
             else:
                 reward += actual_horizon
-            print(simulated_state)
+            logging.info(f"SIMULATED_STATE{simulated_state}")
             target_hit = True
             break
 
@@ -113,7 +115,7 @@ def tiger_experiment(computed_cpomdp: ConsPOMDP, computed_solver: ConsPOMDPBasic
     return max_iterations, target_hit, path, decision_times, target_hit, reward
 
 def log_experiment_with_seed(cpomdp, env, i, log_file_name, solver, targets):
-    handler = logging.FileHandler(f"./logs_tiger/{log_file_name}{i}.log", 'w')
+    handler = logging.FileHandler(f"./logs/logs_tiger/{log_file_name}{i}.log", 'w')
     formatter = logging.Formatter("%(asctime)s %(levelname)-8s %(message)s")
     handler.setFormatter(formatter)
     logger = logging.getLogger(f"{i}")
@@ -139,7 +141,7 @@ def main():
     # set to 5 for extreme debug
 
     logging.basicConfig(
-        filename=f"{log_file_name}.log",
+        filename=f"logs/{log_file_name}.log",
         filemode="w",  # Erase previous log
         format="%(asctime)s %(levelname)-8s %(message)s",
         level=logging_level,
@@ -165,10 +167,10 @@ def main():
     preprocessing_time = round(time.time() - preprocessing_start)
 
     results = Parallel(n_jobs=THREADS)(
-        delayed(log_experiment_with_seed)(cpomdp, env, i, log_file_name, solver, targets) for i in range(1000))
+        delayed(log_experiment_with_seed)(cpomdp, env, i, log_file_name, solver, targets) for i in range(10))
 
     logging.info(f"RESULTS (): {results}")
-    print(preprocessing_time)
+    logging.info(f"PREPROCESSING TIME: {preprocessing_time}")
 
 if __name__ == "__main__":
     main()

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import logging
-import syspath
+from fipomdp.experiments.utils import syspath
+
 syspath.init()
 import platform
 import time
@@ -13,12 +14,12 @@ from joblib import Parallel, delayed
 from fimdp.objectives import BUCHI
 from fipomdp import ConsPOMDP
 from fipomdp.energy_solvers import ConsPOMDPBasicES
-from fipomdp.experiments.NYC_environment import NYCPOMDPEnvironment
-from fipomdp.experiments.UUV_experiment import simulate_observation
-from fipomdp.experimental.pomcp_NYC import OnlineStrategy
+from fipomdp.environments.NYC_environment import NYCPOMDPEnvironment
+from fipomdp.experiments.utils.observation_util import simulate_observation
+from fipomdp.pomcp import OnlineStrategy
 
 from fipomdp.rollout_functions import consumption_based
-from threads_macro import THREADS
+from fipomdp.experiments.utils.threads_macro import THREADS
 
 
 def nyc_experiment(computed_cpomdp: ConsPOMDP, computed_solver: ConsPOMDPBasicES, capacity: int, targets: List[int], random_seed: int, logger) -> \
@@ -50,10 +51,12 @@ def nyc_experiment(computed_cpomdp: ConsPOMDP, computed_solver: ConsPOMDPBasicES
     max_iterations = 100
     actual_horizon = 1000  # number of action to take
     softmax_on = False
+    config_section = "HYPERPARAMETERS_NYC"
     
 # -----
 
     strategy = OnlineStrategy(
+        config_section,
         computed_cpomdp,
         capacity,
         init_energy,
@@ -106,7 +109,7 @@ def nyc_experiment(computed_cpomdp: ConsPOMDP, computed_solver: ConsPOMDPBasicES
 
 
 def log_experiment_with_seed(cpomdp, env, i, log_file_name, solver, targets):
-    handler = logging.FileHandler(f"./logs_NYC/{log_file_name}{i}.log", 'w')
+    handler = logging.FileHandler(f"./logs/logs_NYC/{log_file_name}{i}.log", 'w')
     formatter = logging.Formatter("%(asctime)s %(levelname)-8s %(message)s")
     handler.setFormatter(formatter)
     logger = logging.getLogger(f"{i}")
@@ -133,7 +136,7 @@ def main():
     # set to 5 for extreme debug
 
     logging.basicConfig(
-        filename=f"{log_file_name}.log",
+        filename=f"logs/{log_file_name}.log",
         filemode="w",  # Erase previous log
         format="%(asctime)s %(levelname)-8s %(message)s",
         level=logging_level,

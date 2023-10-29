@@ -12,6 +12,7 @@ from fimdp.core import ActionData
 from fimdp.energy_solvers import BasicES
 from fimdp.objectives import SAFE, POS_REACH, BUCHI
 from fipomdp import ConsPOMDP
+from fipomdp.config.config_utils import ConfigUtils
 
 
 class ConsPOMDPBasicES:
@@ -150,7 +151,11 @@ class ConsPOMDPBasicES:
                         safe_level = max(
                             safe_level, action.cons + self.bs_min_levels[BUCHI][succ]
                         )
-                    # safe_level = -1000000  # SHIELD OFF
+
+                    shield_on = ConfigUtils().get_config_property("HYPERPARAMETERS_GLOBAL")["shield_on"]
+                    if not shield_on:
+                        safe_level = -1000000  # SHIELD OFF
+
                 bsafe_bel_supp_state_actions[action] = safe_level
             bsafe_actions[i] = bsafe_bel_supp_state_actions
 

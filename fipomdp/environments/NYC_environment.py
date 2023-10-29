@@ -11,14 +11,14 @@ class NYCPOMDPEnvironment:
 
     cmdp_env: AEVEnv
 
-    def __init__(self):
+    def __init__(self, capacity: int):
         reloads = ['42431659', '42430367', '1061531810', '42443056', '1061531448', '42448735', '596775930', '42435275',
                    '42429690', '42446036', '42442528', '42440966', '42431186', '42438503', '42442977',
                    '42440966', '1061531802', '42455666']
         targets = ['42440465', '42445916']
 
-        self.cmdp_env = AEVEnv(capacity=600, targets=targets, reloads=reloads, init_state='42459137')
-        self.cmdp_env.reset(init_state='42459137', init_energy=600)
+        self.cmdp_env = AEVEnv(capacity=capacity, targets=targets, reloads=reloads, init_state='42459137')
+        self.cmdp_env.reset(init_state='42459137', init_energy=capacity)
 
     def get_cpomdp(self) -> Tuple[ConsPOMDP, List[int]]:
 
