@@ -35,6 +35,7 @@ from fipomdp.energy_solvers import ConsPOMDPBasicES
 import logging
 
 from fipomdp.environment_utils import softmax
+from fipomdp.online_strategy import OnlineStrategy
 from fipomdp.pomcp_utils import sample_from_distr, filter_safe_actions, matching_state_action
 
 
@@ -57,22 +58,22 @@ class POMCPTree:
     max_function: Callable[[List[float]], float]
 
     def __init__(
-        self,
-        cpomdp: ConsPOMDP,
-        targets: List[int],
-        root_obs: int,
-        root_bel_supp: Tuple[int, ...],
-        capacity: int,
-        energy: int,
-        action_shield: Dict[int, Dict[ActionData, int]],
-        exploration: float,
-        random_seed: int,
-        rollout_function: Callable[[int, int, int, int, int, bool], float],
-        rollout_horizon: int = 100,
-        root_belief: Optional[Dict[int, float]] = None,
-        sparse: bool = False,
-        logger=None,
-        softmax_on: bool = False
+            self,
+            cpomdp: ConsPOMDP,
+            targets: List[int],
+            root_obs: int,
+            root_bel_supp: Tuple[int, ...],
+            capacity: int,
+            energy: int,
+            action_shield: Dict[int, Dict[ActionData, int]],
+            exploration: float,
+            random_seed: int,
+            rollout_function: Callable[[int, int, int, int, int, bool], float],
+            rollout_horizon: int = 100,
+            root_belief: Optional[Dict[int, float]] = None,
+            sparse: bool = False,
+            logger=None,
+            softmax_on: bool = False
     ):
         if logger is None:
             logger = log_utils.get_logger_for_seed(random_seed)
@@ -165,7 +166,7 @@ class POMCPTree:
         return current_history_node, belief_particles
 
     def update_tree(
-        self, history_node: POMCPHistoryNode, result: float, belief_particles: List[int]
+            self, history_node: POMCPHistoryNode, result: float, belief_particles: List[int]
     ) -> None:
         """Method for simulating one tree update for given leaf node, by visiting each node of its history,
         and updating it with given result of rollout evaluation, and for history nodes also with particles accumulated.
@@ -181,7 +182,7 @@ class POMCPTree:
         """
         history = history_node.history
 
-        #TODO what does this mean?
+        # TODO what does this mean?
         result = result - len(belief_particles)
 
         if len(history) != len(belief_particles):
@@ -242,13 +243,13 @@ class POMCPTree:
         self.logger.info(f"Tree run finished")
 
     def tree_reset(
-        self,
-        energy: int,
-        obs: int,
-        bel_supp: Tuple[int, ...],
-        belief: Dict[int, float],
-        exploration: float,
-        random_seed: int,
+            self,
+            energy: int,
+            obs: int,
+            bel_supp: Tuple[int, ...],
+            belief: Dict[int, float],
+            exploration: float,
+            random_seed: int,
     ) -> None:
         """Method for resetting the tree with new initial conditions.
 
@@ -329,7 +330,7 @@ class POMCPTree:
         return action
 
     def rollout(
-        self, history_node: POMCPHistoryNode, state: int, horizon: int
+            self, history_node: POMCPHistoryNode, state: int, horizon: int
     ) -> float:
         """Rollout method for given history node, state and rollout horizon.
         Simulates uniform safe action continuation and returns number of steps needed to reach a target,
@@ -366,7 +367,7 @@ class POMCPTree:
             if len(safe_actions) == 0:
                 return 1000 * horizon * (-1)
             if self.sparse and last_action is not None:
-                if random.random() <= 0.5*(0.99**i) and last_action in safe_actions:
+                if random.random() <= 0.5 * (0.99 ** i) and last_action in safe_actions:
                     bs_action = last_action
                 else:
                     bs_action = random.sample(safe_actions, 1)[0]
@@ -533,11 +534,11 @@ class POMCPActionNode(POMCPNode):
     children: List[POMCPHistoryNode]
 
     def __init__(
-        self,
-        cpomdp: ConsPOMDP,
-        parent_node: POMCPHistoryNode,
-        bel_supp_action: ActionData,
-        logger=None
+            self,
+            cpomdp: ConsPOMDP,
+            parent_node: POMCPHistoryNode,
+            bel_supp_action: ActionData,
+            logger=None
     ):
         if logger is None:
             logger = logging.getLogger()
@@ -586,7 +587,7 @@ class POMCPActionNode(POMCPNode):
         belief_supp = ()
 
         while (
-            belief_supp == () and timeout < 1000 and len(cpomdp_state_action_distr) > 0
+                belief_supp == () and timeout < 1000 and len(cpomdp_state_action_distr) > 0
         ):
             dest_state = sample_from_distr(cpomdp_state_action_distr)
             obs_distr = self.cpomdp.get_state_obs_probs(dest_state)
@@ -689,18 +690,18 @@ class POMCPHistoryNode(POMCPNode):
     max_function: Callable[[List[float]], float]
 
     def __init__(
-        self,
-        cpomdp: ConsPOMDP,
-        capacity: int,
-        obs: int,
-        bel_supp: Tuple[int, ...],
-        energy: int,
-        exploration: float,
-        history: List[Tuple[POMCPHistoryNode, POMCPActionNode]],
-        action_shield: Dict[int, Dict[ActionData, int]],
-        max_function: Callable[[List[float]], float],
-        belief: Optional[Dict[int, float]] = None,
-        logger = None,
+            self,
+            cpomdp: ConsPOMDP,
+            capacity: int,
+            obs: int,
+            bel_supp: Tuple[int, ...],
+            energy: int,
+            exploration: float,
+            history: List[Tuple[POMCPHistoryNode, POMCPActionNode]],
+            action_shield: Dict[int, Dict[ActionData, int]],
+            max_function: Callable[[List[float]], float],
+            belief: Optional[Dict[int, float]] = None,
+            logger=None,
     ) -> None:
         super(POMCPHistoryNode, self).__init__(cpomdp)
         if belief is None:
@@ -724,7 +725,7 @@ class POMCPHistoryNode(POMCPNode):
         self.logger = logger
 
         for action in filter_safe_actions(
-            self.action_shield, self.energy, self.bel_supp_state
+                self.action_shield, self.energy, self.bel_supp_state
         ):
             action_node = POMCPActionNode(cpomdp, self, action, self.logger)
             self.children.append(action_node)
@@ -803,7 +804,7 @@ class POMCPHistoryNode(POMCPNode):
         ]
 
 
-class OnlineStrategy:
+class POMCPStrategy(OnlineStrategy):
     """Online strategy interface class.
 
     Supported operations: update observation, get best action, reset the strategy.
@@ -830,36 +831,33 @@ class OnlineStrategy:
     rollout_function: Callable[[int, int, int, int, int, bool], float]
 
     def __init__(
-        self,
-        config_section: str,
-        cpomdp: ConsPOMDP,
-        capacity: int,
-        init_energy: int,
-        init_obs: int,
-        init_bel_supp: Tuple[int, ...],
-        targets: List[int],
-        exploration: float,
-        rollout_function: Callable[[int, int, int, int, int, bool], float],
-        rollout_horizon: int = 100,
-        random_seed: int = 42,
-        recompute: bool = False,  # In the case that belief and guess constructions are not computed, set to True
-        solver: Optional[ConsPOMDPBasicES] = None,
-        logger=None,
-        softmax_on: bool = False
+            self,
+            config_section: str,
+            cpomdp: ConsPOMDP,
+            capacity: int,
+            targets: List[int],
+            rollout_function: Callable[[int, int, int, int, int, bool], float],
+            random_seed: int = 42,
+            recompute: bool = False,  # In the case that belief and guess constructions are not computed, set to True
+            solver: Optional[ConsPOMDPBasicES] = None,
+            logger=None,
     ):
+        self._init_config(config_section)
+
         if logger is None:
-            logger = logging.getLogger(f"{random_seed}")
+            logger = logging.getLogger(f"{self.random_seed}")
 
         if solver is None:
             self.solver = ConsPOMDPBasicES(
-                cpomdp, list(init_bel_supp), capacity, targets, recompute
+                cpomdp, list(self.init_bel_supp), capacity, targets, recompute
             )
             self.solver.compute_buchi()
 
         else:
             self.solver = solver
 
-        pickled_action_shield_file_path = ConfigUtils().get_config_property(config_section)["pickled_action_shield_file"]
+        pickled_action_shield_file_path = ConfigUtils().get_config_property(config_section)[
+            "pickled_action_shield_file"]
         path = os.path.join("pickled", pickled_action_shield_file_path)
         if os.path.exists(path):
             with open(path, "rb") as asfile:
@@ -870,23 +868,40 @@ class OnlineStrategy:
                 pickle.dump(action_shield, asfile)
 
         self.action_picked = False
+        self.random_seed = random_seed
 
         self.tree = POMCPTree(
             cpomdp,
             targets,
-            init_obs,
-            init_bel_supp,
+            self.init_obs,
+            self.init_bel_supp,
             capacity,
-            init_energy,
+            self.init_energy,
             action_shield,
-            exploration,
-            random_seed,
+            self.exploration,
+            self.random_seed,
             rollout_function,
-            rollout_horizon,
+            self.rollout_horizon,
             sparse=False,
             logger=logger,
-            softmax_on=softmax_on
+            softmax_on=self.softmax_on
         )
+
+    def _init_config(self, config_section: str):
+        try:
+            properties = ConfigUtils().get_config_property(config_section)
+            global_properties = ConfigUtils().get_config_property('HYPERPARAMETERS_GLOBAL')
+
+            self.init_bel_supp = eval(properties['init_belief_support'])
+            self.init_obs = properties['init_observation']
+            self.init_energy = properties['init_energy']
+            self.rollout_horizon = properties['horizon']
+
+            self.exploration = global_properties['exploration']
+            self.softmax_on = global_properties['softmax']
+        except:
+            logging.error("Failed to parse config in OnlineStrategy")
+            raise
 
     def update_obs(self, outcome: int) -> None:
         """Method signalizing the tree the new observation outcome
@@ -925,13 +940,13 @@ class OnlineStrategy:
         return self.best_action
 
     def reset(
-        self,
-        init_energy: int,
-        init_obs: int,
-        init_bel_supp: Tuple[int, ...],
-        exploration: float,
-        init_belief: Dict[int, float],
-        random_seed: int = 42,
+            self,
+            init_energy: int,
+            init_obs: int,
+            init_bel_supp: Tuple[int, ...],
+            exploration: float,
+            init_belief: Dict[int, float],
+            random_seed: int = 42,
     ) -> None:
         """Method for resetting the strategy with new initial conditions.
 

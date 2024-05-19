@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 import logging
+
+from fipomdp.config.config_utils import ConfigUtils
 from fipomdp.experiments.utils import syspath
 
 syspath.init()
@@ -16,61 +18,41 @@ from fipomdp import ConsPOMDP
 from fipomdp.energy_solvers import ConsPOMDPBasicES
 from fipomdp.environments.NYC_environment import NYCPOMDPEnvironment
 from fipomdp.experiments.utils.observation_util import simulate_observation
-from fipomdp.pomcp import OnlineStrategy
+from fipomdp.pomcp import POMCPStrategy
 
-from fipomdp.rollout_functions import consumption_based
+from fipomdp.reward_functions import consumption_based
 from fipomdp.experiments.utils.threads_macro import THREADS
 
 
-def nyc_experiment(computed_cpomdp: ConsPOMDP, computed_solver: ConsPOMDPBasicES, capacity: int, targets: List[int], random_seed: int, logger) -> \
-        Tuple[int, bool, List[int], List[int], bool, int]:
-    logger = logger
-
+def nyc_experiment(computed_cpomdp: ConsPOMDP,
+                   computed_solver: ConsPOMDPBasicES,
+                   capacity: int, targets: List[int],
+                   random_seed: int,
+                   config_section: str,
+                   logger,
+                   ) ->  Tuple[int, bool, List[int], List[int], bool, int]:
     if computed_cpomdp.belief_supp_cmdp is None or computed_solver.bs_min_levels[BUCHI] is None:
         raise AttributeError(f"Given CPOMDP or its solver is not pre computed!")
 
-# SPECIFY ROLLOUT FUNCTION
-
-    # rollout_function = basic
-
-    # grid_adjusted = partial(grid_manhattan_distance, grid_size=(20, 20), targets=[3, 12, 15])
     rollout_function = consumption_based
-    #
-    # rollout_product = partial(product, a=10, b=20)
-    # rollout_function = rollout_product
 
-# -----
+    #   HYPER PARAMETERS NEEDED FOR EXPERIMENTS
 
-#   HYPER PARAMETERS
+    parameters = ConfigUtils().get_config_property(config_section)
+    actual_horizon = parameters['horizon']
+    init_bel_supp = eval(parameters['init_belief_support'])
+    max_iterations = parameters["iterations"]
 
-    init_energy = capacity
-    init_obs = computed_cpomdp.state_with_name('42459137')
-    init_bel_supp = tuple([computed_cpomdp.state_with_name('42459137')])
-    exploration = 1
-    rollout_horizon = 100
-    max_iterations = 100
-    actual_horizon = 1000  # number of action to take
-    softmax_on = False
-    config_section = "HYPERPARAMETERS_NYC"
-    
-# -----
-
-    strategy = OnlineStrategy(
+    strategy = POMCPStrategy(
         config_section,
         computed_cpomdp,
         capacity,
-        init_energy,
-        init_obs,
-        init_bel_supp,
         targets,
-        exploration,
         rollout_function,
-        rollout_horizon=rollout_horizon,
-        random_seed=random_seed,
+        random_seed,
         recompute=False,
         solver=computed_solver,
         logger=logger,
-        softmax_on=softmax_on
     )
 
     simulated_state = init_bel_supp[0]
@@ -82,7 +64,7 @@ def nyc_experiment(computed_cpomdp: ConsPOMDP, computed_solver: ConsPOMDPBasicES
     target_hit = False
     decision_times = []
 
-    for j in range(actual_horizon):
+    for _ in range(actual_horizon):
         pre_decision_time = time.time()
         action = strategy.next_action(max_iterations)
         simulated_state, new_obs = simulate_observation(computed_cpomdp, action, simulated_state)
@@ -109,6 +91,9 @@ def nyc_experiment(computed_cpomdp: ConsPOMDP, computed_solver: ConsPOMDPBasicES
 
 
 def log_experiment_with_seed(cpomdp, env, i, log_file_name, solver, targets):
+
+    config_section = "HYPERPARAMETERS_NYC"
+
     handler = logging.FileHandler(f"./logs/logs_NYC/{log_file_name}{i}.log", 'w')
     formatter = logging.Formatter("%(asctime)s %(levelname)-8s %(message)s")
     handler.setFormatter(formatter)
@@ -126,7 +111,7 @@ def log_experiment_with_seed(cpomdp, env, i, log_file_name, solver, targets):
     logger.info(f"Machine: {uname.machine}")
     logger.info(f"Processor: {uname.processor}")
     logger.info(f"RAM: {str(round(psutil.virtual_memory().total / (1024.0 ** 3)))} GB")
-    return nyc_experiment(cpomdp, solver, env.cmdp_env.capacity, targets, i, logger)
+    return nyc_experiment(cpomdp, solver, env.cmdp_env.capacity, targets, i, config_section, logger)
 
 
 def main():
@@ -143,7 +128,9 @@ def main():
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 
-    env = NYCPOMDPEnvironment()
+    capacity = ConfigUtils().get_config_property("HYPERPARAMETERS_NYC")['capacity']
+
+    env = NYCPOMDPEnvironment(capacity)
     cpomdp, targets = env.get_cpomdp()
 
     preprocessing_start = time.time()
@@ -152,6 +139,14 @@ def main():
 
     solver = ConsPOMDPBasicES(cpomdp, [cpomdp.state_with_name('42459137')], env.cmdp_env.capacity, targets)
     solver.compute_buchi()
+
+    init_obs = cpomdp.state_with_name('42459137')
+    init_bel_supp = tuple([cpomdp.state_with_name('42459137')])
+
+    props = ConfigUtils().get_config_property("HYPERPARAMETERS_NYC")
+    props['init_belief_support'] = init_bel_supp
+    props['init_observation'] = init_obs
+    ConfigUtils().set_config_property("HYPERPARAMETERS_NYC", props)
 
     preprocessing_time = round(time.time() - preprocessing_start)
 

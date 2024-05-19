@@ -18,11 +18,11 @@ from fimdp.objectives import BUCHI
 from fimdpenv.UUVEnv import SingleAgentEnv
 from fipomdp import ConsPOMDP, log_utils
 from fipomdp.energy_solvers import ConsPOMDPBasicES
-from fipomdp.pomcp import OnlineStrategy
+from fipomdp.pomcp import POMCPStrategy
 from fipomdp.environment_utils import set_cross_observations_to_UUV_grid
 from fipomdp.pomcp_utils import matching_state_action, sample_from_distr
 
-from fipomdp.rollout_functions import basic, grid_manhattan_distance, step_based
+from fipomdp.reward_functions import basic, grid_manhattan_distance, step_based
 
 
 def uuv_experiment(computed_cpomdp: ConsPOMDP, computed_solver: ConsPOMDPBasicES, capacity: int, targets: List[int], random_seed: int, logger) -> \
@@ -33,7 +33,7 @@ def uuv_experiment(computed_cpomdp: ConsPOMDP, computed_solver: ConsPOMDPBasicES
     # if computed_cpomdp.belief_supp_cmdp is None or computed_solver.bs_min_levels[BUCHI] is None:
     #     raise AttributeError(f"Given CPOMDP or its solver is not pre computed!")
 
-# SPECIFY ROLLOUT FUNCTION from rollout_functions.py
+# SPECIFY REWARD FUNCTION from reward_functions.py
 
     rollout_function = step_based
     #
@@ -55,7 +55,7 @@ def uuv_experiment(computed_cpomdp: ConsPOMDP, computed_solver: ConsPOMDPBasicES
 
 # -----
 
-    strategy = OnlineStrategy(
+    strategy = POMCPStrategy(
         computed_cpomdp,
         capacity,
         init_energy,

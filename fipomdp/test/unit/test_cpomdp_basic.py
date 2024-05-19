@@ -8,7 +8,7 @@ from fipomdp.environment_utils import (
     set_cross_observations_to_UUV_grid,
     get_guessing_stats,
 )
-from fipomdp.pomcp import OnlineStrategy
+from fipomdp.pomcp import POMCPStrategy
 
 
 def basic():
@@ -442,7 +442,7 @@ def test_strategy():
     exploration = 0.9
     random_seed = 1
 
-    strategy = OnlineStrategy(
+    strategy = POMCPStrategy(
         cpomdp,
         capacity,
         init_energy,

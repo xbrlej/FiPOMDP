@@ -5,6 +5,7 @@ LOGGING:
   filemode: "w"
   file: "default_logfile.log"
   dateformat: "%Y-%m-%d %H:%M:%S"
+
 HYPERPARAMETERS_UUV8:
   capacity: "16"
   init_energy: "16"
@@ -32,59 +33,60 @@ HYPERPARAMETERS_UUV12:
   sparse: "True"
 
 HYPERPARAMETERS_UUV16:
-  capacity: "16"
-  init_energy: "16"
-  init_observation: "143"
-  init_belief_support: "[143]"
-  horizon: "100"
+  capacity: 16
+  init_energy: 16
+  init_observation: 143
+  init_belief_support: [143]
+  horizon: 100
   precomputed_shield: "False"
   precomputed_cpomdp: "True"
   pickled_action_shield_file: "as_16"
   pickled_cpomdp: "cpomdp_16"
-  iterations: "1000"
+  iterations: 1000
   sparse: "True"
 
 HYPERPARAMETERS_UUV20:
-  capacity: "16"
-  init_energy: "16"
-  init_observation: "143"
-  init_belief_support: "[143]"
-  horizon: "100"
+  capacity: 16
+  init_energy: 16
+  init_observation: 143
+  init_belief_support: [143]
+  horizon: 100
   precomputed_shield: "False"
   precomputed_cpomdp: "True"
   pickled_action_shield_file: "as_20"
   pickled_cpomdp: "cpomdp_20"
-  iterations: "1000"
+  iterations: 1000
   sparse: "True"
 
 HYPERPARAMETERS_NYC:
-  capacity: "600"
-  init_energy: "600"
-  init_observation: "1"
-  horizon: "1000"
-  precomputed_shield: "False"
-  precomputed_cpomdp: "True"
+  capacity: 600
+  init_energy: 600
+  init_observation: 1
+  horizon: 1000
+  precomputed_shield: False
+  precomputed_cpomdp: True
   pickled_action_shield_file: "as_nyc"
   pickled_cpomdp: "cpomdp_nyc"
-  iterations: "100"
+  iterations: 100
+  sparse: "False"
 
 HYPERPARAMETERS_TIGER:
-  capacity: "10"
-  init_energy: "10"
-  init_observation: "0"
+  capacity: 10
+  init_energy: 10
+  init_observation: 0
   init_belief_support: "tuple([0, 1])"
-  horizon: "500"
-  precomputed_shield: "False"
-  precomputed_cpomdp: "True"
+  horizon: 500
+  precomputed_shield: False
+  precomputed_cpomdp: True
   pickled_action_shield_file: "as_tiger"
   pickled_cpomdp: "cpomdp_tiger"
-  iterations: "100"
+  iterations: 100
   listen_uncertainty: 0.15
   swap_probability: 0.2
+  sparse: "False"
 
 HYPERPARAMETERS_GLOBAL:
-  exploration: "1"
+  exploration: 1.0  # TYPE FLOAT
   softmax: "False"
-  random_seed: "42"
   shield_on: "True"
   is_sparse: "False"

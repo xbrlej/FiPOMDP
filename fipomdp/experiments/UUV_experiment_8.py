@@ -10,57 +10,45 @@ from typing import List, Tuple, Dict
 from joblib import Parallel, delayed
 import pickle
 
+from fipomdp.config.config_utils import ConfigUtils
+
 sys.path.append('/home/xnovot18/FiPOMDP')
 
 from fimdp.core import ActionData
 from fimdpenv.UUVEnv import SingleAgentEnv
 from fipomdp import ConsPOMDP
 from fipomdp.energy_solvers import ConsPOMDPBasicES
-from fipomdp.pomcp import OnlineStrategy
+from fipomdp.pomcp import POMCPStrategy
 from fipomdp.environment_utils import set_cross_observations_to_UUV_grid
 from fipomdp.pomcp_utils import matching_state_action, sample_from_distr
 
-from fipomdp.rollout_functions import basic, grid_manhattan_distance, step_based
+from fipomdp.reward_functions import basic, grid_manhattan_distance, step_based
 
 
-def uuv_experiment(computed_cpomdp: ConsPOMDP, computed_solver: ConsPOMDPBasicES, capacity: int, targets: List[int], random_seed: int, logger) -> \
-        Tuple[int, bool, List[int], List[int], bool, int]:
-
-    logger = logger
-
-    # if computed_cpomdp.belief_supp_cmdp is None or computed_solver.bs_min_levels[BUCHI] is None:
-    #     raise AttributeError(f"Given CPOMDP or its solver is not pre computed!")
-
-# SPECIFY ROLLOUT FUNCTION from rollout_functions.py
+def uuv_experiment(computed_cpomdp: ConsPOMDP,
+                   computed_solver: ConsPOMDPBasicES,
+                   capacity: int,
+                   targets: List[int],
+                   random_seed: int,
+                   config_section: str,
+                   logger) -> Tuple[int, bool, List[int], List[int], bool, int]:
 
     rollout_function = step_based
-    #
-    grid_adjusted = partial(grid_manhattan_distance, grid_size=[8, 8], targets=[14, 28, 34])
-    # rollout_function = grid_adjusted
 
-# -----
+    #   HYPER PARAMETERS NEEDED FOR EXPERIMENTS
 
-#   HYPER PARAMETERS
+    parameters = ConfigUtils().get_config_property(config_section)
+    actual_horizon = parameters['horizon']
+    init_bel_supp = eval(parameters['init_belief_support'])
+    max_iterations = parameters["iterations"]
 
-    init_energy = capacity
-    init_obs = 63
-    init_bel_supp = tuple([63])
-    exploration = 25
-    rollout_horizon = 100
-    max_iterations = 800
-    actual_horizon = 100
-# -----
-    strategy = OnlineStrategy(
+    strategy = POMCPStrategy(
+        config_section,
         computed_cpomdp,
         capacity,
-        init_energy,
-        init_obs,
-        init_bel_supp,
         targets,
-        exploration,
         rollout_function,
-        rollout_horizon=rollout_horizon,
-        random_seed=random_seed,
+        random_seed,
         recompute=False,
         solver=computed_solver,
         logger=logger
@@ -108,6 +96,9 @@ def simulate_observation(cpomdp: ConsPOMDP, bs_action: ActionData, src_state: in
 
 
 def log_experiment_with_seed(cpomdp, env, i, log_file_name, solver, targets):
+
+    config_section = "HYPERPARAMETERS_UUV8"
+
     handler = logging.FileHandler(f"./logs/logs_8/{log_file_name}{i}.log", 'w')
     formatter = logging.Formatter("%(asctime)s %(levelname)-8s %(message)s")
     handler.setFormatter(formatter)
@@ -157,12 +148,6 @@ def main():
 
     cpomdp = mdp
     cpomdp.compute_guessing_cmdp_initial_state([63])
-
-    with open("pickled/cpomdp_8", "wb") as cpomdp_file:
-        pickle.dump(cpomdp, cpomdp_file)
-
-    # with open("cpomdp_8", 'rb') as pickle_file:
-    #    cpomdp = pickle.load(pickle_file)
 
     solver = ConsPOMDPBasicES(cpomdp, [63], env.capacities[0], targets)
     solver.compute_buchi()

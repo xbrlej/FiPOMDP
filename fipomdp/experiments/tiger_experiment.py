@@ -1,4 +1,6 @@
 import logging
+
+from fipomdp.config.config_utils import ConfigUtils
 from fipomdp.experiments.utils import syspath
 
 syspath.init()
@@ -16,63 +18,41 @@ from fipomdp import ConsPOMDP
 from fipomdp.energy_solvers import ConsPOMDPBasicES
 from fipomdp.experiments.utils.observation_util import simulate_observation
 from fipomdp.environments.tiger_environent import TigerEnvironment
-from fipomdp.pomcp import OnlineStrategy
-from fipomdp.rollout_functions import tiger_step_based
+from fipomdp.pomcp import POMCPStrategy
+from fipomdp.reward_functions import tiger_step_based
 from fipomdp.experiments.utils.threads_macro import THREADS
 
 
-def tiger_experiment(computed_cpomdp: ConsPOMDP, computed_solver: ConsPOMDPBasicES, capacity: int, targets: List[int],
-                   random_seed: int, logger) -> \
-        Tuple[int, bool, List[int], List[int], bool, int]:
-    logger = logger
-
+def tiger_experiment(computed_cpomdp: ConsPOMDP,
+                     computed_solver: ConsPOMDPBasicES,
+                     capacity: int,
+                     targets: List[int],
+                     random_seed: int,
+                     config_section: str,
+                     logger) -> Tuple[int, bool, List[int], List[int], bool, int]:
     if computed_cpomdp.belief_supp_cmdp is None or computed_solver.bs_min_levels[BUCHI] is None:
         raise AttributeError(f"Given CPOMDP or its solver is not pre computed!")
-
-    # SPECIFY ROLLOUT FUNCTION
-
-    # rollout_function = basic
-
-    # grid_adjusted = partial(grid_manhattan_distance, grid_size=(20, 20), targets=[3, 12, 15])
 
     tiger_bite_weight = 10
     rollout_function = partial(tiger_step_based, tiger_bite_weight=tiger_bite_weight)
 
-    # rollout_product = partial(product, a=10, b=20)
-    # rollout_function = rollout_product
+    #   HYPER PARAMETERS NEEDED FOR EXPERIMENTS
 
-    # -----
+    parameters = ConfigUtils().get_config_property(config_section)
+    actual_horizon = parameters['horizon']
+    init_bel_supp = eval(parameters['init_belief_support'])
+    max_iterations = parameters["iterations"]
 
-    #   HYPER PARAMETERS
-
-    init_energy = capacity
-    init_obs = 0  # init
-    init_bel_supp = tuple([0, 1])  # init_left or init_right
-    exploration = 1
-    rollout_horizon = 100
-    max_iterations = 100
-    actual_horizon = 500  # number of action to take
-    softmax_on = False
-    config_section = "HYPERPARAMETERS_TIGER"
-
-    # -----
-
-    strategy = OnlineStrategy(
+    strategy = POMCPStrategy(
         config_section,
         computed_cpomdp,
         capacity,
-        init_energy,
-        init_obs,
-        init_bel_supp,
         targets,
-        exploration,
         rollout_function,
-        rollout_horizon=rollout_horizon,
-        random_seed=random_seed,
+        random_seed,
         recompute=False,
         solver=computed_solver,
         logger=logger,
-        softmax_on=softmax_on
     )
 
     simulated_state = init_bel_supp[0] # init_left
@@ -84,7 +64,7 @@ def tiger_experiment(computed_cpomdp: ConsPOMDP, computed_solver: ConsPOMDPBasic
     target_hit = False
     decision_times = []
 
-    for j in range(actual_horizon):
+    for _ in range(actual_horizon):
         pre_decision_time = time.time()
         action = strategy.next_action(max_iterations)
         decision_times.append((time.time() - pre_decision_time))
@@ -114,11 +94,14 @@ def tiger_experiment(computed_cpomdp: ConsPOMDP, computed_solver: ConsPOMDPBasic
 
     return max_iterations, target_hit, path, decision_times, target_hit, reward
 
-def log_experiment_with_seed(cpomdp, env, i, log_file_name, solver, targets):
-    handler = logging.FileHandler(f"./logs/logs_tiger/{log_file_name}{i}.log", 'w')
+def log_experiment_with_seed(cpomdp, env, index_and_random_state, log_file_name, solver, targets):
+
+    config_section = "HYPERPARAMETERS_TIGER"
+
+    handler = logging.FileHandler(f"./logs/logs_tiger/{log_file_name}{index_and_random_state}.log", 'w')
     formatter = logging.Formatter("%(asctime)s %(levelname)-8s %(message)s")
     handler.setFormatter(formatter)
-    logger = logging.getLogger(f"{i}")
+    logger = logging.getLogger(f"{index_and_random_state}")
     for handler in logger.handlers[:]:
         logger.removeHandler(handler)
     logger.addHandler(handler)
@@ -132,7 +115,7 @@ def log_experiment_with_seed(cpomdp, env, i, log_file_name, solver, targets):
     logger.info(f"Machine: {uname.machine}")
     logger.info(f"Processor: {uname.processor}")
     logger.info(f"RAM: {str(round(psutil.virtual_memory().total / (1024.0 ** 3)))} GB")
-    return tiger_experiment(cpomdp, solver, env.capacity, targets, i, logger)
+    return tiger_experiment(cpomdp, solver, env.capacity, targets, index_and_random_state, config_section, logger)
 
 def main():
     log_file_name = "TigerExperiments"  # Change for your needs
@@ -167,7 +150,7 @@ def main():
     preprocessing_time = round(time.time() - preprocessing_start)
 
     results = Parallel(n_jobs=THREADS)(
-        delayed(log_experiment_with_seed)(cpomdp, env, i, log_file_name, solver, targets) for i in range(10))
+        delayed(log_experiment_with_seed)(cpomdp, env, i, log_file_name, solver, targets) for i in range(100))
 
     logging.info(f"RESULTS (): {results}")
     logging.info(f"PREPROCESSING TIME: {preprocessing_time}")
